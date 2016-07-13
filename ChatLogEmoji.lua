@@ -1,17 +1,12 @@
 --------------------------------------------------------------------------------
--- This is an official Reflex script. Do not modify.
---
--- If you wish to customize this widget, please:
---  * clone this file to a new file
---  * rename the widget MyWidget
---  * set this widget to not visible (via options menu)
---  * set your new widget to visible (via options menu)
---
+-- modification of official reflex chatlog (04.07.2016)
+-- by Kimi https://github.com/mittermichal/reflex-chatlog-emoji-widget
 --------------------------------------------------------------------------------
 
 require "base/internal/ui/reflexcore"
+require "EmojiDraw"
 
-ChatLog =
+ChatLogEmoji =
 {
 	--canHide = false;
 	canPosition = true;
@@ -19,7 +14,7 @@ ChatLog =
 	cursorFlash = 0;
 	entryOffsetX = 0;
 };
-registerWidget("ChatLog");
+registerWidget("ChatLogEmoji");
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -106,7 +101,7 @@ end
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 local lastBeepId = 0;
-function ChatLog:draw()
+function ChatLogEmoji:draw()
 	local localPlayer = getLocalPlayer();
 	local shouldBeep = false;
 	local cursorFlashPeriod = 0.25;
@@ -307,12 +302,13 @@ function ChatLog:draw()
 				-- bg
 				nvgFontBlur(2);
 				nvgFillColor(Color(0, 0, 0, 255*intensity));
-				nvgText(x, y + 1, lineText);
-
+				--nvgText(x, y + 1, lineText);
+				drawTextWithEmojis(x, y+ 1, lineText)
 				-- foreground
 				nvgFontBlur(0);
 				nvgFillColor(col);
-				nvgText(x, y, lineText);
+				--nvgText(x, y, lineText);
+				drawTextWithEmojis(x, y, lineText)
 				
 				y = y - 24;
 			end
