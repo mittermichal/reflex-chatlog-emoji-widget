@@ -317,7 +317,7 @@ function ChatLogEmoji:draw()
 				shouldBeepDrop = true;
 			end
 
-			shouldBold = true;
+			shouldBold = false;
 		end
 
 		if shouldBold == true then
