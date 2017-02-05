@@ -1,10 +1,10 @@
 require "EmojiTable"
 
-local shortcode_regexp = ':([-+%w_]+):'
+local shortcode_regexp = ':([-+%w_:]+):'
 local emoji_reg = "("..shortcode_regexp..")" --missing ignore case
 
 function drawTextWithEmojis(x,y,text)
-	if string.len(text)==0 then return end 
+	if string.len(text)==0 then return end
 	match_start,match_end=string.find(string.lower(text),shortcode_regexp)
 	if match_start==nil then
 		--consolePrint(text)
