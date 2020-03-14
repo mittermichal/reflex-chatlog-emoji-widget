@@ -19,7 +19,7 @@ registerWidget("ChatLogEmoji");
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 local function formatRaceMessage(logEntry)
-	
+
 	-- is this event for the player we're watching?
 	local isLocal = logEntry.racePlayerIndex == playerIndexCameraAttachedTo;
 
@@ -52,6 +52,19 @@ end
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
+local function formatDropMessage(logEntry)
+	local itemName = "item" .. logEntry.dropItemDefId;
+
+	local def = inventoryDefinitions[logEntry.dropItemDefId];
+	if def ~= nil then
+		itemName = def.name;
+	end
+
+	return string.format("%s received item: %s!", logEntry.dropPlayerName, itemName);
+end
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
 local function pullWord(text)
 	local space = string.find(text, "%s");
 	if space == nil then
@@ -68,7 +81,7 @@ local function splitTextToMultipleLines(text, w)
 	local lines = {};
 	local lineCount = 0;
 	local newLine = "";
-	
+
 	while string.len(text) > 0 do
 		local newWord;
 
@@ -104,8 +117,9 @@ local lastBeepId = 0;
 function ChatLogEmoji:draw()
 	local localPlayer = getLocalPlayer();
 	local shouldBeep = false;
+	local shouldBeepDrop = false;
 	local cursorFlashPeriod = 0.25;
-	
+
 	local col = Color(230, 230, 230);
 	local colTeam = Color(126, 204, 255);
 	local colSpec = Color(255, 204, 126);
@@ -125,15 +139,15 @@ function ChatLogEmoji:draw()
 	if replayName == "menu" then
 		return false;
 	end
-	
+
 	-- prep
 	nvgFontSize(FONT_SIZE_DEFAULT);
 	nvgFontFace(FONT_TEXT);
 	nvgTextAlign(NVG_ALIGN_LEFT, NVG_ALIGN_MIDDLE);
-	
+
 	-- read input
 	local say = sayRegion();
-	
+
 	-- if cursor moves, restart flash
 	self.cursorFlash = self.cursorFlash + deltaTimeRaw;
 	if say.cursorChanged then
@@ -165,7 +179,7 @@ function ChatLogEmoji:draw()
 		--nvgFillColor(Color(255, 0, 0));
 		--nvgFill();
 
-		-- prepare "player: " 
+		-- prepare "player: "
 		local entryTextStart = localPlayer.name;
 		local entryCol = Color(col.r, col.g, col.b, 255 * intensity);
 		if say.sayTeam then
@@ -190,14 +204,14 @@ function ChatLogEmoji:draw()
 		nvgFillColor(entryCol);
 		nvgText(x, y, entryTextStart);
 		local entryTextStartWidth = nvgTextWidth(entryTextStart);
-		
+
 		-- prepare actual say text
 		local entryText = say.text;
 		local entryLen = string.len(entryText);
 		local tx = x + entryTextStartWidth+self.entryOffsetX;
 		local textUntilCursor = string.sub(entryText, 0, say.cursor);
 		local textWidthAtCursor = nvgTextWidth(textUntilCursor);
-		
+
 		-- handle scrolling back/forward with a large buffer!
 		local cursorx = tx + textWidthAtCursor;
 		local endx = (x+w);
@@ -211,11 +225,11 @@ function ChatLogEmoji:draw()
 			self.entryOffsetX = self.entryOffsetX + cursorearly;
 		end
 		tx = x + entryTextStartWidth+self.entryOffsetX; -- update now, so we're not a frame late
-		
+
 		-- clip actual text
 		nvgSave();
 		nvgIntersectScissor(x+entryTextStartWidth, y-50, w-entryTextStartWidth, h);
-		
+
 		-- draw actual text
 		nvgFontBlur(2);
 		nvgFillColor(Color(0, 0, 0, intensity*255));
@@ -228,13 +242,13 @@ function ChatLogEmoji:draw()
 		if say.cursor ~= say.cursorStart then
 			local textUntilCursorStart = string.sub(entryText, 0, say.cursorStart);
 			local textWidthAtCursorStart = nvgTextWidth(textUntilCursorStart);
-		
+
 			local selx = math.min(textWidthAtCursor, textWidthAtCursorStart);
 			local selw = math.abs(textWidthAtCursor - textWidthAtCursorStart);
 			nvgBeginPath();
 			nvgRect(tx + selx, y - 10, selw, 22);
 			nvgFillColor(Color(255, 192, 192, 128));
-			nvgFill();	
+			nvgFill();
 		end
 
 		-- remove clip
@@ -253,10 +267,10 @@ function ChatLogEmoji:draw()
 			end
 		end
 	end
-			
+
 	y = y - 34;
 	nvgScissor(x, bordery - h, w, h);
-	
+
 	-- history
 	for i = 1, logCount do
 		local logEntry = log[i];
@@ -288,14 +302,32 @@ function ChatLogEmoji:draw()
 		elseif logEntry.type == LOG_TYPE_NOTIFICATION then
 			col = Color(255, 288, 0);
 			text = logEntry.notification;
+
 		elseif logEntry.type == LOG_TYPE_RACEEVENT then
 			col = Color(255, 30, 30);
-			text = formatRaceMessage(logEntry);			
+			text = formatRaceMessage(logEntry);
+
+		elseif logEntry.type == LOG_TYPE_DROP then
+			col = Color(128, 255, 0);
+			text = formatDropMessage(logEntry);
+
+			local id = logEntry.id;
+			if id > lastBeepId then
+				lastBeepId = id;
+				shouldBeepDrop = true;
+			end
+
+			shouldBold = true;
+		end
+
+		if shouldBold == true then
+			nvgSave();
+			nvgFontFace(FONT_TEXT_BOLD);
 		end
 
 		if text ~= nil then
 			local lines, lineCount = splitTextToMultipleLines(text, w);
-			
+
 			for line = lineCount, 1, -1 do
 				local lineText = lines[line];
 
@@ -309,11 +341,15 @@ function ChatLogEmoji:draw()
 				nvgFillColor(col);
 				--nvgText(x, y, lineText);
 				drawTextWithEmojis(x, y, lineText)
-				
+
 				y = y - 24;
 			end
 		end
+		if shouldBold == true then
+			nvgRestore();
+		end
 	end
-	
+
 	if shouldBeep then playSound("internal/misc/chat") end
+	if shouldBeepDrop then playSound("internal/ui/sounds/notifyDrop") end
 end
