@@ -28,7 +28,7 @@ function drawTextWithEmojis(x,y,text)
 		size=FONT_SIZE_DEFAULT/2
 		--rect=nvgTextBounds(print_text)
 		--size=(rect.maxy-rect.miny)/2
-		nvgSvg('internal/ui/widgets/emoji/svg/'..filename, x+size/2, y, size)
+		nvgSvg(emoji_path..filename, x+size/2, y, size)
 		x=x+size*1.5
 	end
 	drawTextWithEmojis(x,y,string.sub(text,match_end+1,-1))

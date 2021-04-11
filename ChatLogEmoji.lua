@@ -1,5 +1,5 @@
 --------------------------------------------------------------------------------
--- modification of official reflex chatlog (04.07.2016)
+-- modification of official reflex chatlog (31.01.2017)
 -- by Kimi https://github.com/mittermichal/reflex-chatlog-emoji-widget
 --------------------------------------------------------------------------------
 
@@ -15,6 +15,13 @@ ChatLogEmoji =
 	entryOffsetX = 0;
 };
 registerWidget("ChatLogEmoji");
+
+function ChatLogEmoji:initialize()
+ local function getScriptPath()--thanks qualx this forces an error message to get the path as a string
+  return ({string.match(({pcall(function() error("") end)})[2],"^%[string \"base/(.*)/.-%.lua\"%]:%d+: $")})[1]
+ end
+ emoji_path = getScriptPath() .. '/svg/'
+end
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
@@ -123,6 +130,7 @@ function ChatLogEmoji:draw()
 	local col = Color(230, 230, 230);
 	local colTeam = Color(126, 204, 255);
 	local colSpec = Color(255, 204, 126);
+	local colParty = Color(127, 255, 50);
 	local borderPad = 10;
 	local logCount = 0;
 	local x = 0;
@@ -137,6 +145,12 @@ function ChatLogEmoji:draw()
 
 	-- no chatlog in menu replay
 	if replayName == "menu" then
+		return false;
+	end
+	if localPlayer == nil then
+		return false;
+	end
+	if isInMenu() then
 		return false;
 	end
 
@@ -182,7 +196,12 @@ function ChatLogEmoji:draw()
 		-- prepare "player: "
 		local entryTextStart = localPlayer.name;
 		local entryCol = Color(col.r, col.g, col.b, 255 * intensity);
-		if say.sayTeam then
+		if say.sayParty then
+			entryCol.r = colParty.r;
+			entryCol.g = colParty.g;
+			entryCol.b = colParty.b;
+			entryTextStart = entryTextStart .. " (party)";
+		elseif say.sayTeam then
 			entryCol.r = colTeam.r;
 			entryCol.g = colTeam.g;
 			entryCol.b = colTeam.b;
@@ -278,17 +297,22 @@ function ChatLogEmoji:draw()
 
 		local text = nil;
 
+		local shouldBold = false;
 		if logEntry.type == LOG_TYPE_CHATMESSAGE then
 			local mod = "";
 
 			col = Color(239, 237, 255, 255*intensity);
 			if logEntry.chatType == LOG_CHATTYPE_TEAM then
-				col = Color(126, 204, 255);
+				col = colTeam;
 				mod = " (team)";
 			end
 			if logEntry.chatType == LOG_CHATTYPE_SPECTATOR then
-				col = Color(255, 204, 126);
+				col = colSpec;
 				mod = " (spec)";
+			end
+			if logEntry.chatType == LOG_CHATTYPE_PARTY then
+				col = colParty;
+				mod = " (party)";
 			end
 
 			text = logEntry.chatPlayer .. mod .. ": " .. logEntry.chatMessage;
@@ -299,7 +323,7 @@ function ChatLogEmoji:draw()
 				shouldBeep = true;
 			end
 
-		elseif logEntry.type == LOG_TYPE_NOTIFICATION then
+		elseif logEntry.type == LOG_TYPE_NOTIFICATION and logEntry.notificationType ~= LOG_NOTIFICATIONTYPE_PARTY then
 			col = Color(255, 288, 0);
 			text = logEntry.notification;
 
@@ -317,7 +341,7 @@ function ChatLogEmoji:draw()
 				shouldBeepDrop = true;
 			end
 
-			shouldBold = false;
+			shouldBold = true;
 		end
 
 		if shouldBold == true then
